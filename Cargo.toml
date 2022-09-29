@@ -1,0 +1,11 @@
+[package]
+name = 'musicbrainz_cuesheet'
+version = '0.1.0'
+edition = '2021'
+
+[dependencies]
+anyhow = '*'
+chrono = '*'
+clap = { version = '*', features = ['derive'] }
+musicbrainz_rs = { version = '*', default-features = false, features = ['blocking'] }
+reqwest = { version = '*', features = ['blocking'] }
