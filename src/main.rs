@@ -44,22 +44,20 @@ fn millisecond_to_mmssff(ms: u32) -> String {
     format!("{minutes:02}:{seconds:02}:{frames:02}")
 }
 
-fn download_cover_art(url: &str, output_path_prefix: impl AsRef<Path>) -> anyhow::Result<()> {
-    let resp = reqwest::blocking::get(url)?;
+fn download_cover_art(url: &str, output_path_prefix: impl AsRef<Path>) {
+    let resp = reqwest::blocking::get(url).unwrap();
     if resp.status().is_success() {
-        let file_extension = Path::new(resp.url().path()).extension().and_then(|ext| ext.to_str()).unwrap();
-        let output_path = output_path_prefix.as_ref().with_extension(file_extension);
-        std::fs::write(output_path, resp.bytes()?)?;
+        let file_extension = Path::new(resp.url().path()).extension().unwrap().to_string_lossy();
+        let output_path = output_path_prefix.as_ref().with_extension(file_extension.as_ref());
+        std::fs::write(output_path, resp.bytes().unwrap()).unwrap();
     } else {
         eprintln!("HTTP error code {}", resp.status());
     }
-
-    Ok(())
 }
 
-fn main() -> anyhow::Result<()> {
+fn main() {
     let args = Args::parse();
-    std::fs::create_dir_all(&args.out_dir)?;
+    std::fs::create_dir_all(&args.out_dir).unwrap();
 
     musicbrainz_rs::config::set_user_agent(USER_AGENT);
 
@@ -70,17 +68,18 @@ fn main() -> anyhow::Result<()> {
         .with_labels()
         .with_recordings()
         .with_release_groups()
-        .execute()?;
+        .execute()
+        .unwrap();
     let mut release_cuesheet = String::new();
     //std::fs::write("D:\\mb_debug.txt", format!("{:#?}", release));
 
     if let Some(artists) = release.artist_credit {
-        writeln!(release_cuesheet, "PERFORMER \"{}\"", join_artists(&artists))?;
+        writeln!(release_cuesheet, "PERFORMER \"{}\"", join_artists(&artists)).unwrap();
     }
 
     if let Some(release_group) = release.release_group {
         if let Some(genres) = release_group.genres {
-            writeln!(release_cuesheet, "REM GENRE {}", genres.iter().map(|g| g.name.clone()).collect::<Vec<_>>().join("; "))?;
+            writeln!(release_cuesheet, "REM GENRE {}", genres.iter().map(|g| g.name.clone()).collect::<Vec<_>>().join("; ")).unwrap();
         }
 
         if let Some(release_date) = release_group.first_release_date {
@@ -94,20 +93,21 @@ fn main() -> anyhow::Result<()> {
                 } else {
                     release_date.to_string()
                 }
-            )?;
+            )
+            .unwrap();
         }
     }
 
     if let Some(label) = release.label_info {
         for l in label.iter().filter_map(|l| l.label.clone()) {
             if !l.name.is_empty() {
-                writeln!(release_cuesheet, "REM COMMENT \"{}\"", l.name)?;
+                writeln!(release_cuesheet, "REM COMMENT \"{}\"", l.name).unwrap();
             }
         }
     }
 
-    writeln!(release_cuesheet, "REM MUSICBRAINZ_ALBUM_ID {}", release.id)?;
-    writeln!(release_cuesheet, "FILE \"CDImage.flac\" WAVE")?;
+    writeln!(release_cuesheet, "REM MUSICBRAINZ_ALBUM_ID {}", release.id).unwrap();
+    writeln!(release_cuesheet, "FILE \"CDImage.flac\" WAVE").unwrap();
 
     if let Some(media) = release.media {
         let is_album = media.len() > 1;
@@ -129,20 +129,20 @@ fn main() -> anyhow::Result<()> {
 
             let mut track_start = 0;
             for track in medium.tracks.unwrap_or_default().iter() {
-                writeln!(medium_cuesheet, "  TRACK {:02} AUDIO", track.position)?;
-                writeln!(medium_cuesheet, "    TITLE \"{}\"", track.title)?;
+                writeln!(medium_cuesheet, "  TRACK {:02} AUDIO", track.position).unwrap();
+                writeln!(medium_cuesheet, "    TITLE \"{}\"", track.title).unwrap();
 
                 if let Some(track_artists) = &track.recording.artist_credit {
-                    writeln!(medium_cuesheet, "    PERFORMER \"{}\"", join_artists(track_artists))?;
+                    writeln!(medium_cuesheet, "    PERFORMER \"{}\"", join_artists(track_artists)).unwrap();
                 }
 
                 let track_length = track.length.unwrap();
-                writeln!(medium_cuesheet, "    INDEX 01 {}", millisecond_to_mmssff(track_start))?;
+                writeln!(medium_cuesheet, "    INDEX 01 {}", millisecond_to_mmssff(track_start)).unwrap();
                 track_start += track_length;
             }
 
             let output_filename = format!("{medium_id}.cue");
-            std::fs::write(args.out_dir.join(output_filename), medium_cuesheet)?;
+            std::fs::write(args.out_dir.join(output_filename), medium_cuesheet).unwrap();
         }
     }
 
@@ -151,14 +151,14 @@ fn main() -> anyhow::Result<()> {
         if let Ok(resp) = Release::fetch_coverart().id(&args.release_id).execute() {
             match resp {
                 CoverartResponse::Url(cover_art_url) => {
-                    download_cover_art(&cover_art_url, cover_art_path)?;
+                    download_cover_art(&cover_art_url, cover_art_path);
                 }
                 CoverartResponse::Json(cover_art) => {
-                    std::fs::create_dir(&cover_art_path)?;
+                    std::fs::create_dir(&cover_art_path).unwrap();
 
                     for img in cover_art.images {
                         let img_filename_stem = img.types.iter().map(|t| format!("{t:#?}")).collect::<Vec<_>>().join("_");
-                        download_cover_art(&img.image, cover_art_path.join(img_filename_stem))?;
+                        download_cover_art(&img.image, cover_art_path.join(img_filename_stem));
                         std::thread::sleep(Duration::from_secs(1));
                     }
                 }
@@ -167,6 +167,4 @@ fn main() -> anyhow::Result<()> {
             eprintln!("Failed to download cover art")
         }
     }
-
-    Ok(())
 }
