@@ -1,4 +1,5 @@
 use std::fmt::Write;
+use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -44,11 +45,11 @@ fn millisecond_to_mmssff(ms: u32) -> String {
     format!("{minutes:02}:{seconds:02}:{frames:02}")
 }
 
-fn download_cover_art(url: &str, output_path_prefix: impl AsRef<Path>) {
+fn download_cover_art(url: &str, output_path_prefix: &Path) {
     let resp = reqwest::blocking::get(url).unwrap();
     if resp.status().is_success() {
         let file_extension = Path::new(resp.url().path()).extension().unwrap().to_string_lossy();
-        let output_path = output_path_prefix.as_ref().with_extension(file_extension.as_ref());
+        let output_path = output_path_prefix.with_extension(file_extension.as_ref());
         std::fs::write(output_path, resp.bytes().unwrap()).unwrap();
     } else {
         eprintln!("HTTP error code {}", resp.status());
@@ -57,7 +58,7 @@ fn download_cover_art(url: &str, output_path_prefix: impl AsRef<Path>) {
 
 fn main() {
     let args = Args::parse();
-    std::fs::create_dir_all(&args.out_dir).unwrap();
+    create_dir_all(&args.out_dir).unwrap();
 
     musicbrainz_rs::config::set_user_agent(USER_AGENT);
 
@@ -99,7 +100,7 @@ fn main() {
     }
 
     if let Some(label) = release.label_info {
-        for l in label.iter().filter_map(|l| l.label.clone()) {
+        for l in label.into_iter().filter_map(|li| li.label) {
             if !l.name.is_empty() {
                 writeln!(release_cuesheet, "REM COMMENT \"{}\"", l.name).unwrap();
             }
@@ -151,14 +152,14 @@ fn main() {
         if let Ok(resp) = Release::fetch_coverart().id(&args.release_id).execute() {
             match resp {
                 CoverartResponse::Url(cover_art_url) => {
-                    download_cover_art(&cover_art_url, cover_art_path);
+                    download_cover_art(&cover_art_url, &cover_art_path);
                 }
                 CoverartResponse::Json(cover_art) => {
-                    std::fs::create_dir(&cover_art_path).unwrap();
+                    create_dir_all(&cover_art_path).unwrap();
 
                     for img in cover_art.images {
                         let img_filename_stem = img.types.iter().map(|t| format!("{t:#?}")).collect::<Vec<_>>().join("_");
-                        download_cover_art(&img.image, cover_art_path.join(img_filename_stem));
+                        download_cover_art(&img.image, &cover_art_path.join(img_filename_stem));
                         std::thread::sleep(Duration::from_secs(1));
                     }
                 }
