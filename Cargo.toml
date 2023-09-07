@@ -4,7 +4,7 @@ version = '0.1.0'
 edition = '2021'
 
 [dependencies]
-chrono = '*'
+chrono = { version = '*', default-features = false }
 clap = { version = '*', features = ['derive'] }
 musicbrainz_rs = { version = '*', default-features = false, features = ['blocking'] }
 reqwest = { version = '*', features = ['blocking'] }

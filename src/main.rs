@@ -80,7 +80,7 @@ fn main() {
 
     if let Some(release_group) = release.release_group {
         if let Some(genres) = release_group.genres {
-            writeln!(release_cuesheet, "REM GENRE {}", genres.iter().map(|g| g.name.clone()).collect::<Vec<_>>().join("; ")).unwrap();
+            writeln!(release_cuesheet, "REM GENRE {}", genres.into_iter().map(|g| g.name).collect::<Vec<_>>().join("; ")).unwrap();
         }
 
         if let Some(release_date) = release_group.first_release_date {
