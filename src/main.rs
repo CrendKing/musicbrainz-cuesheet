@@ -1,5 +1,4 @@
 use std::fmt::Write;
-use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -58,7 +57,7 @@ fn download_cover_art(url: &str, output_path_prefix: &Path) {
 
 fn main() {
     let args = Args::parse();
-    create_dir_all(&args.out_dir).unwrap();
+    std::fs::create_dir_all(&args.out_dir).unwrap();
 
     musicbrainz_rs::config::set_user_agent(USER_AGENT);
 
@@ -155,7 +154,7 @@ fn main() {
                     download_cover_art(&cover_art_url, &cover_art_path);
                 }
                 CoverartResponse::Json(cover_art) => {
-                    create_dir_all(&cover_art_path).unwrap();
+                    std::fs::create_dir_all(&cover_art_path).unwrap();
 
                     for img in cover_art.images {
                         let img_filename_stem = img.types.iter().map(|t| format!("{t:#?}")).collect::<Vec<_>>().join("_");
