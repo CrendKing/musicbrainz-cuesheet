@@ -79,7 +79,7 @@ fn main() {
 
     if let Some(release_group) = release.release_group {
         if let Some(genres) = release_group.genres {
-            writeln!(release_cuesheet, "REM GENRE {}", genres.into_iter().map(|g| g.name).collect::<Vec<_>>().join("; ")).unwrap();
+            writeln!(release_cuesheet, "REM GENRE {}", genres.into_iter().map(|g| g.name).collect::<Box<_>>().join("; ")).unwrap();
         }
 
         if let Some(release_date) = release_group.first_release_date {
@@ -157,7 +157,7 @@ fn main() {
                     std::fs::create_dir_all(&cover_art_path).unwrap();
 
                     for img in cover_art.images {
-                        let img_filename_stem = img.types.iter().map(|t| format!("{t:#?}")).collect::<Vec<_>>().join("_");
+                        let img_filename_stem = img.types.iter().map(|t| format!("{t:#?}")).collect::<Box<_>>().join("_");
                         download_cover_art(&img.image, &cover_art_path.join(img_filename_stem));
                         std::thread::sleep(Duration::from_secs(1));
                     }

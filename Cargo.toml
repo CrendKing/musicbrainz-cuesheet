@@ -1,5 +1,5 @@
 [package]
-name = 'musicbrainz_cuesheet'
+name = 'musicbrainz-cuesheet'
 version = '0.1.0'
 edition = '2021'
 
