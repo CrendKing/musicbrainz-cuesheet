@@ -15,7 +15,7 @@ const COVER_ART_PATH_COMPONENT: &str = "Cover";
 #[derive(Parser)]
 struct Args {
     #[clap(short = 'r', long)]
-    release_id: String,
+    release_id: Box<str>,
 
     #[clap(short = 'c', long)]
     cover_art: bool,
@@ -24,14 +24,15 @@ struct Args {
     out_dir: PathBuf,
 }
 
-fn join_artists(artists: &[ArtistCredit]) -> String {
+fn join_artists(artists: &[ArtistCredit]) -> Box<str> {
     artists
         .iter()
         .map(|a| format!("{}{}", a.name, a.joinphrase.clone().unwrap_or_default()))
         .collect::<String>()
+        .into_boxed_str()
 }
 
-fn millisecond_to_mmssff(ms: u32) -> String {
+fn millisecond_to_mmssff(ms: u32) -> Box<str> {
     // From https://wiki.hydrogenaud.io/index.php?title=Cue_sheet:
     // FF the number of frames (there are seventy five frames to one second)
     const MILLISECONDS_PER_FRAME: f64 = 1000.0 / 75.0;
@@ -41,14 +42,14 @@ fn millisecond_to_mmssff(ms: u32) -> String {
     let seconds = (ms / 1000) % 60;
     let minutes = ms / 60000;
 
-    format!("{minutes:02}:{seconds:02}:{frames:02}")
+    format!("{minutes:02}:{seconds:02}:{frames:02}").into_boxed_str()
 }
 
 fn download_cover_art(url: &str, output_path_prefix: &Path) {
     let resp = reqwest::blocking::get(url).unwrap();
     if resp.status().is_success() {
         let file_extension = Path::new(resp.url().path()).extension().unwrap().to_string_lossy();
-        let output_path = output_path_prefix.with_extension(file_extension.as_ref());
+        let output_path = output_path_prefix.with_extension(&*file_extension);
         std::fs::write(output_path, resp.bytes().unwrap()).unwrap();
     } else {
         eprintln!("HTTP error code {}", resp.status());
