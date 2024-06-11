@@ -4,12 +4,13 @@ use std::time::Duration;
 
 use chrono::Datelike;
 use clap::Parser;
+use if_chain::if_chain;
 use musicbrainz_rs::entity::artist_credit::ArtistCredit;
 use musicbrainz_rs::entity::release::Release;
 use musicbrainz_rs::entity::CoverartResponse;
 use musicbrainz_rs::{Fetch, FetchCoverart};
 
-const USER_AGENT: &str = "musicbrainz_cuesheet/0.1.0 (alpha testing)";
+const USER_AGENT: &str = "musicbrainz_cuesheet/0.1.0 (testing)";
 const COVER_ART_PATH_COMPONENT: &str = "Cover";
 
 #[derive(Parser)]
@@ -119,8 +120,10 @@ fn main() {
             if is_album {
                 medium_title += &format!("- {medium_id}")
             }
-            if let Some(t) = medium.title {
-                if !t.is_empty() {
+            if_chain! {
+                if let Some(t) = medium.title;
+                if !t.is_empty();
+                then {
                     medium_title += &format!(": {}", t);
                 }
             }
@@ -129,7 +132,7 @@ fn main() {
             let mut medium_cuesheet = format!("{medium_title}\n{release_cuesheet}");
 
             let mut track_start = 0;
-            for track in medium.tracks.unwrap_or_default().iter() {
+            for track in medium.tracks.unwrap_or_default() {
                 writeln!(medium_cuesheet, "  TRACK {:02} AUDIO", track.position).unwrap();
                 writeln!(medium_cuesheet, "    TITLE \"{}\"", track.title).unwrap();
 
