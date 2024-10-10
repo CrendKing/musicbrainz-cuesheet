@@ -1,5 +1,5 @@
 use std::fmt::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use chrono::Datelike;
@@ -16,24 +16,23 @@ const COVER_ART_PATH_COMPONENT: &str = "Cover";
 #[derive(Parser)]
 struct Args {
     #[clap(short = 'r', long)]
-    release_id: Box<str>,
+    release_id: String,
 
     #[clap(short = 'c', long)]
     cover_art: bool,
 
     #[clap(short = 'o', long)]
-    out_dir: Box<Path>,
+    out_dir: PathBuf,
 }
 
-fn join_artists(artists: &[ArtistCredit]) -> Box<str> {
+fn join_artists(artists: &[ArtistCredit]) -> String {
     artists
         .iter()
         .map(|a| format!("{}{}", a.name, a.joinphrase.clone().unwrap_or_default()))
         .collect::<String>()
-        .into_boxed_str()
 }
 
-fn millisecond_to_mmssff(ms: u32) -> Box<str> {
+fn millisecond_to_mmssff(ms: u32) -> String {
     // From https://wiki.hydrogenaud.io/index.php?title=Cue_sheet:
     // FF the number of frames (there are seventy five frames to one second)
     const MILLISECONDS_PER_FRAME: f64 = 1000.0 / 75.0;
@@ -43,7 +42,7 @@ fn millisecond_to_mmssff(ms: u32) -> Box<str> {
     let seconds = (ms / 1000) % 60;
     let minutes = ms / 60000;
 
-    format!("{minutes:02}:{seconds:02}:{frames:02}").into_boxed_str()
+    format!("{minutes:02}:{seconds:02}:{frames:02}")
 }
 
 fn download_cover_art(url: &str, output_path_prefix: &Path) {
@@ -81,7 +80,7 @@ fn main() {
 
     if let Some(release_group) = release.release_group {
         if let Some(genres) = release_group.genres {
-            writeln!(release_cuesheet, "REM GENRE {}", genres.into_iter().map(|g| g.name).collect::<Box<_>>().join("; ")).unwrap();
+            writeln!(release_cuesheet, "REM GENRE {}", genres.into_iter().map(|g| g.name).collect::<Vec<_>>().join("; ")).unwrap();
         }
 
         if let Some(release_date) = release_group.first_release_date {
@@ -101,9 +100,11 @@ fn main() {
     }
 
     if let Some(label) = release.label_info {
-        for l in label.into_iter().filter_map(|li| li.label) {
-            if !l.name.is_empty() {
-                writeln!(release_cuesheet, "REM COMMENT \"{}\"", l.name).unwrap();
+        for l in label {
+            if let Some(li) = l.label {
+                if !li.name.is_empty() {
+                    writeln!(release_cuesheet, "REM COMMENT \"{}\"", li.name).unwrap();
+                }
             }
         }
     }
@@ -124,7 +125,7 @@ fn main() {
                 if let Some(t) = medium.title;
                 if !t.is_empty();
                 then {
-                    medium_title += &format!(": {}", t);
+                    medium_title += &format!(": {t}");
                 }
             }
             medium_title += "\"";
@@ -161,7 +162,7 @@ fn main() {
                     std::fs::create_dir_all(&cover_art_path).unwrap();
 
                     for img in cover_art.images {
-                        let img_filename_stem = img.types.iter().map(|t| format!("{t:#?}")).collect::<Box<_>>().join("_");
+                        let img_filename_stem = img.types.iter().map(|t| format!("{t:#?}")).collect::<Vec<_>>().join("_");
                         download_cover_art(&img.image, &cover_art_path.join(img_filename_stem));
                         std::thread::sleep(Duration::from_secs(1));
                     }
